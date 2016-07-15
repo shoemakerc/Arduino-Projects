@@ -1,0 +1,38 @@
+E-Stop WallBox Terminal Block
+ Row | ---A--- | ---B--- | ---C--- | ---D---
+  1  | -----Empty------- |    +5V-> Hanger
+  2  |  Sense-Ard-Door   |  Relay <-Hanger
+  3  |   Ard LED Red     |  Sens 24V CtrlCab
+  4  |   Ard LED Green   |  Sens Rdy CtrlCab
+  5  | Ard5V   DoorGrnd  =  MOSGrnd  CCGrnd  
+  6  | ArdGrnd  LEDCath  =  RelayGrnd 
+  
+  
+Default:
+  424-432
+  Positive 1 rising
+  52-67
+  44-71
+  Will not positive flip it twice in current peg location
+  Positive 1 falling
+  370-389  - same as default
+  Negative 1 falling
+  798-807
+  Will not negative flip it twice in current peg location
+  Negative 1 rising
+  474-487  - same as default
+  
+Thus the middle is 370 - 490
+The lower toggle is half-way between 70 and 370 = 220
+The upper toggle is half-way between 490 and 790 = 640 
+The bottom range should be 40
+The top range should be 850.
+
+0-10
+10-25
+210-230
+380-400
+580-600
+830-850
+990-1000
+No change
