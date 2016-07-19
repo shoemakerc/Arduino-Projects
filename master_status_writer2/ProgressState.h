@@ -6,7 +6,7 @@ struct ProgressState
   enum {MAXCHAR = 16}           ;
   unsigned int current_test     ; //0-511 test number
   unsigned int total_test       ;//0-511 test number
-  unsigned int seconds_remaining; //0-16383 seconds or about 4.5 hours
+  int seconds_remaining  ; //0-16383 seconds or about 4.5 hours
 
   char test_type[MAXCHAR];
   char subject_name[MAXCHAR];

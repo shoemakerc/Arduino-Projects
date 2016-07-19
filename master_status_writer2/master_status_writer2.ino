@@ -1,11 +1,11 @@
 #include <Wire.h>
 #include "CtrlState.h"
-#include "Header.h" //TODO
+#include "MarqueeState.h" //TODO
 #include "ProgressState.h" //TODO
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define BUFF_SIZE 512
+#define BUFF_SIZE 256
 #define RECEP_ERROR -1
 
 #define TCGpin  A8    // Turn-Counter Ground (Analog)
@@ -27,23 +27,13 @@
 #define SBTpin  32   // Seatbelt Secure (Black)
 #define SBGpin  33   // SeatBelt Ground (White)
 #define MBKpin  34   // Mechanical Brake Engaged (Yellow)
-#define MBGpin  35   // Mech Brake Ground (Red) 
+#define MBGpin  35   // Mech Brake Ground (Red)
 #define CMTpin  40   // Commutation Sensor On
 #define CMVpin  41   // Commutation Power
 #define CMHpin  42   // Commutation Sensor Home
 #define RQSpin  47   // Request Status LED
 #define R2Epin  48   // Enter Requested Sense
 #define REGpin  49   // Request-To-Enter Ground  <-- This may be removed as there is already a ground available -->
-
-#define TEXT_HEADER 1  //TODO
-#define SENSOR_HEADER 0 //TODO
-#define TEST_HEADER 2 //TODO
-
-//Our state from all our sensors plus what is passed in by the host.
-ORVCtrlUnion orvcu = { 0, 0 };
-ProgressState prog;
-
-HeaderUnion data = {0}; //TODO
 
 //<----------- from host----------->
 int R2R = 0 ; // 0: not ready,     1: ready [Ready Run]
@@ -71,155 +61,105 @@ int SRO = 0; // 0: off,         1: on [Power-on]
 #define SLT_BlinkGrn  (SLT_Green | SLT_Yellow)
 #define SLT_Rotating  (SLT_Red | SLT_Green | SLT_Yellow)
 
+// <-------------Header Set -------------------------->
+/*  CS = CtrlState          Nothing to display, just update and return the data to the host
+    PD = ProgressDisplay    Changes display to progress mode
+    MX = Marquee LineX      Update lineX text (x = (1,2,3,4))
+    MB = Bitmap             Update bitmap
+    MC = Clear              Clear all on screen data
+    MD = MarqueeDisplay     Changes display to marquee mode
+    DD = DefaultDisplay     Changes display to default mode
+*/
+
 byte mac[] = {
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
 };
 IPAddress ip(192, 168, 0, 86); // Ethernet
-//IPAddress myDns(192, 168, 1, 1);
-//IPAddress gateway(192, 168, 1, 1);
-//IPAddress subnet(255, 255, 0, 0);
 
 EthernetServer server(23); // Ethernet
 boolean alreadyConnected = false;
 
-int numberdata = 125; // default test number is 125 of 150
-int timedata = 200 * 60; // default starting time is 200 seconds
-
-String g_inputStream; // input string buffer for client commands
-String inputStream;
+String inputStream; // input string buffer for client commands
+static ORVCtrlUnion orvcu = {0, 0};
 
 void setup() {
-//  Ethernet.begin(mac, ip); //, myDns, gateway, subnet); // Ethernet
+  Ethernet.begin(mac, ip); //, myDns, gateway, subnet); // Ethernet
 
- // server.begin();
+  server.begin();
   Wire.begin(); // join i2c bus (address optional for master)
-//  initializePins(); // set pinModes for pins used on Arduino board
+  initializePins(); // set pinModes for pins used on Arduino board
   Serial.begin(9600);
 
   digitalWrite(RQSpin, HIGH);
 
-  //Serial.print("Server address is: "); // Ethernet
- // Serial.println(Ethernet.localIP());
+  Serial.print("Server address is: "); // Ethernet
+  Serial.println(Ethernet.localIP());
 }
+
+//First two bytes are the header bytes
+char send_buffer[BUFF_SIZE];//TODO
 
 void loop() {
-  //collects data from all the sensors
-  /*
-  Wire.beginTransmission(13);
-  Wire.write('C');
-  Wire.write('S');
-  Wire.endTransmission();
-  delay(10);
-}
-*/
-  prog.current_test = 65;
-  prog.total_test = 66;
-  prog.seconds_remaining = 67;
-  //prog.test_type = {'a','b','c'};
-  //prog.subject_name = {'b','o','b'};
+//  static ORVCtrlUnion orvcu = {0, 0}; // moved to global
+  static ProgressState prog;
+  static MarqueeState marq;
 
-  read_inputs();
+  //collects data from all the sensors
+  read_inputs(orvcu);
+
+  orvcu.bit.SRO = 1;
 
   // wait for a new client:
   EthernetClient client = server.available();
 
-  //data.bit.HED = 0; //TODO
-
-  //max size string is 31-characters long.
-  char textdata[] = "1234567890123456!"; //TODO
-
-  //int numberdata = 125; //TODO -- Placed into global scope
-  //int timedata = 200 * 60; //TODO -- Placed into global scope
-  int x_cor = 5; //TODO
-  int y_cor = 10;//TODO
-  int col = 2000;//TODO
-
-  //Host data:
-  //orvcu.bit.R2R = 1;
-  //orvcu.bit.SRO = 1;
-  //orvcu.bit.IMN = 1;
-
-  //orvcu.bit.MOR = 1;
-
-  //manual_override_check();
+  manual_override_check(orvcu);
+  request_to_enter_check(orvcu);
 
   //collects data to determine the state of the stoplight
-  //orvcu.bit.SLT = RYG_SET();
+  orvcu.bit.SLT = RYG_SET(orvcu);
   //lights the stoplight according to the state
-  //led_control();
-
+  led_control(orvcu);
   // when the client sends the first byte, say hello:
+  /*
   if (client) {
+
     if (!alreadyConnected) {
       // clear out the input buffer:
       client.flush();
       Serial.println("New client is online");
       alreadyConnected = true;
     }
-    
-        while (client.available() > 0) {
-          // read the bytes incoming from the client:
-          char thisChar = client.read();
-          g_inputStream.concat(thisChar);
-          Serial.print(thisChar);
-        }
-        char buff[BUFF_SIZE] = "";
-        if (g_inputStream[0] == 'C' && g_inputStream[1] == 'S') {
-          
-        }
-    
-    /*
-    if (client.available() > 0) {
-      char thisChar = client.read();
-      if (thisChar != '\n') {
-        if (thisChar >= 48 && thisChar <= 50) {
-          data.bit.HED = thisChar - 48;
-        } else if (thisChar == 32 || (thisChar >= 65 && thisChar <= 126)) {
-          inputStream.concat(thisChar);
-        } else {
-          if (inputStream.equalsIgnoreCase("Change host fields")) {
-            changeStatus(thisChar, client);
-          } else if (inputStream.equalsIgnoreCase("Set time")) {
-            timedata = setTime(thisChar, client);
-          } else if (inputStream.equalsIgnoreCase("Set test number")) {
-            numberdata = setTest(thisChar, client);
-          } else if (inputStream.equalsIgnoreCase("Set override status") || inputStream.startsWith("Override") || inputStream.startsWith("override")) {
-            manOver(thisChar, client);
-          }
-          inputStream = "";
-        }
-      }
+
+    while (client.available() > 0) {
+      // read the bytes incoming from the client:
+      char inch = client.read();
+      inputStream.concat(inch);
     }
+
+    if (inputStream[0] == 'P' && inputStream[1] == 'D') {
+      send_buffer[0] == inputStream[0];
+      send_buffer[1] == inputStream[1];
+      memcpy(&send_buffer[2], &prog, sizeof(prog));
+      sendWire(send_buffer);
+    } else if (inputStream[0] == 'M' && inputStream[1] == 'D') {
+      send_buffer[0] == inputStream[0];
+      send_buffer[1] == inputStream[1];
+      memcpy(&send_buffer[2], &marq, sizeof(marq));
+      sendWire(send_buffer);
+    } else if (inputStream[0] == 'M' && inputStream[1] == 'C') { //TODO clears display
+      MarqueeState marq1;
+      marq = marq1;
+    } else if (inputStream[0] == 'D' && inputStream[1] == 'D') {
+      send_buffer[0] == inputStream[0];
+      send_buffer[1] == inputStream[1];
+      sendWire(send_buffer);
+    }
+    inputStream = "";
   }
 */
-/*
-  Wire.beginTransmission(13); // transmit to device #13
-  if (data.bytes[0] == SENSOR_HEADER) { //TODO
-    Wire.write(data.bytes[0]); //TODO
-    for (int i = 0; i < 4; i++) {
-      Wire.write(orvcu.bytes[i]);
-    }
-  } else if (data.bytes[0] == TEXT_HEADER) { //TODO
-    Wire.write(data.bytes[0]); //TODO
-    Wire.write(x_cor);
-    Wire.write(y_cor);  //Combine all this data into one array ideally
-    Wire.write(col);
-    //Wire.write(textdata, (sizeof(textdata) / sizeof(*textdata))); //TODO
-  } else if (data.bytes[0] == TEST_HEADER) { //TODO
-    Wire.write(data.bytes[0]); //TODO
-    Wire.write(prog.current_test);
-    //Wire.write(prog.total_test);
-  }
-  //Wire.write(
-  //Wire.write(numberdata); //TODO
-  //Wire.write(timedata); //lower 8 bits
-  //Wire.write((timedata >> 8)); //upper 8 bits
-  //
-  Wire.endTransmission();    // stop transmitting
   delay(10);
-  
 }
-*/
+
 //<------------------------------------------------------------>
 
 void initializePins() {
@@ -283,7 +223,7 @@ void initializePins() {
   return;
 }
 
-void read_inputs()
+void read_inputs(ORVCtrlUnion orvcu)
 {
   // R2E, CVT, ESP, DRS, MOR, SBT, and MBK are normally pulled-up
   // When switched close, they are pulled LOW.
@@ -305,7 +245,7 @@ void read_inputs()
   //TURN_COUNTER_INPUT();
 }
 
-int  RYG_SET() {
+int  RYG_SET(ORVCtrlUnion orvcu) {
   int stoplightstate = SLT_Off;
   if (orvcu.bit.CVT == 1 // when 24 volts on, ready to run, not moving,  e-stop off, power off
       && orvcu.bit.R2R == 1
@@ -338,7 +278,7 @@ int  RYG_SET() {
   return stoplightstate;
 }
 
-void led_control() {
+void led_control(ORVCtrlUnion orvcu) {
   static unsigned int old_state = 0;
   if (old_state != orvcu.bit.SLT) {
     digitalWrite(SLRpin, (orvcu.bit.SLT & SLT_Red) ? HIGH : LOW);
@@ -348,7 +288,7 @@ void led_control() {
   }
 }
 
-void manual_override_check() {
+void manual_override_check(ORVCtrlUnion orvcu) {
   digitalWrite(MOApin, (orvcu.bit.MOR ? HIGH : LOW));
   if (orvcu.bit.MOR == 1) {
     digitalWrite(MORpin, HIGH);
@@ -356,14 +296,31 @@ void manual_override_check() {
   }
 }
 
-void request_enter_check() {
+void request_to_enter_check(ORVCtrlUnion orvcu) {
   digitalWrite(RQSpin, (orvcu.bit.R2E ? HIGH : LOW));
-  if (orvcu.bit.R2E == 1) {
-    
+  if (orvcu.bit.R2E == 0) {
+    send_buffer[0] = 'D';
+    send_buffer[1] = 'H';
+    memcpy(&send_buffer[2], &orvcu, sizeof(orvcu));
+    Serial.println((int)send_buffer[2]);
+    Serial.println((int)send_buffer[3]);
+    Serial.println((int)send_buffer[4]);
+    Serial.println((int)send_buffer[5]);
+    Serial.println(sizeof(orvcu));
+    //Serial.println(orvcu.bit.SRO);
+    sendWire(send_buffer);
   }
 }
+
+void sendWire(char send_buffer[]) {
+  Wire.beginTransmission(13); // transmit to device #13
+  for (int i = 0; i < sizeof(send_buffer); i++) {
+    Wire.write(send_buffer);
+  }
+  Wire.endTransmission();    // stop transmitting
+}
 /*
-  void changeStatus(char input, EthernetClient client) {
+ORVCtrlUnion changeStatus(char input, EthernetClient client, ORVCtrlUnion orvcu) {
   client.read();
   client.println("R2R?");
   while (input != '\n') {
@@ -392,9 +349,10 @@ void request_enter_check() {
       break;
     }
   }
-  }
+  return orvcu;
+}
 
-  int setTest(char input, EthernetClient client) {
+int setTest(char input, EthernetClient client) {
   client.read();
   client.println("What is the current test number?");
   String testNumString;
@@ -408,9 +366,9 @@ void request_enter_check() {
   }
   int testNum = testNumString.toInt();
   return testNum;
-  }
+}
 
-  int setTime(char input, EthernetClient client) {
+int setTime(char input, EthernetClient client) {
   client.read();
   client.println("Enter the number of seconds to set timer to:");
   String timeString;
@@ -424,19 +382,20 @@ void request_enter_check() {
   }
   int timeAmt = timeString.toInt();
   return timeAmt;
-  }
+}
 
-  void manOver(char input, EthernetClient client) {
+int manOver(char input, EthernetClient client) {
+  int manOverStatus;
   client.read() ;
   client.println("Enter status of manual override:");
   while (input != '\n') {
     char digit = client.read();
     if (digit == 48 || digit == 49) {
       Serial.println(digit);
-      orvcu.bit.MOR = digit - 48;
+      manOverStatus = digit - 48;
       break;
     }
   }
-  }
+  return manOverStatus;
+}
 */
-
