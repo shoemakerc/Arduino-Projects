@@ -5,7 +5,7 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define BUF_SIZ 512
+#define BUFF_SIZE 512
 #define RECEP_ERROR -1
 
 #define TCGpin  A8    // Turn-Counter Ground (Analog)
@@ -85,25 +85,33 @@ boolean alreadyConnected = false;
 int numberdata = 125; // default test number is 125 of 150
 int timedata = 200 * 60; // default starting time is 200 seconds
 
-String inputStream; // input string buffer for client commands
+String g_inputStream; // input string buffer for client commands
+String inputStream;
 
 void setup() {
-  Ethernet.begin(mac, ip); //, myDns, gateway, subnet); // Ethernet
+//  Ethernet.begin(mac, ip); //, myDns, gateway, subnet); // Ethernet
 
-  server.begin();
+ // server.begin();
   Wire.begin(); // join i2c bus (address optional for master)
-  initializePins(); // set pinModes for pins used on Arduino board
+//  initializePins(); // set pinModes for pins used on Arduino board
   Serial.begin(9600);
 
   digitalWrite(RQSpin, HIGH);
 
-  Serial.print("Server address is: "); // Ethernet
-  Serial.println(Ethernet.localIP());
+  //Serial.print("Server address is: "); // Ethernet
+ // Serial.println(Ethernet.localIP());
 }
 
 void loop() {
   //collects data from all the sensors
-
+  /*
+  Wire.beginTransmission(13);
+  Wire.write('C');
+  Wire.write('S');
+  Wire.endTransmission();
+  delay(10);
+}
+*/
   prog.current_test = 65;
   prog.total_test = 66;
   prog.seconds_remaining = 67;
@@ -133,26 +141,35 @@ void loop() {
 
   //orvcu.bit.MOR = 1;
 
-  manual_override_check();
+  //manual_override_check();
 
   //collects data to determine the state of the stoplight
-  orvcu.bit.SLT = RYG_SET();
+  //orvcu.bit.SLT = RYG_SET();
   //lights the stoplight according to the state
-  led_control();
+  //led_control();
 
   // when the client sends the first byte, say hello:
   if (client) {
-
     if (!alreadyConnected) {
       // clear out the input buffer:
       client.flush();
       Serial.println("New client is online");
-      //.println("Please type a command and press Enter to finish");
       alreadyConnected = true;
     }
-
+    
+        while (client.available() > 0) {
+          // read the bytes incoming from the client:
+          char thisChar = client.read();
+          g_inputStream.concat(thisChar);
+          Serial.print(thisChar);
+        }
+        char buff[BUFF_SIZE] = "";
+        if (g_inputStream[0] == 'C' && g_inputStream[1] == 'S') {
+          
+        }
+    
+    /*
     if (client.available() > 0) {
-      // read the bytes incoming from the client:
       char thisChar = client.read();
       if (thisChar != '\n') {
         if (thisChar >= 48 && thisChar <= 50) {
@@ -174,6 +191,8 @@ void loop() {
       }
     }
   }
+*/
+/*
   Wire.beginTransmission(13); // transmit to device #13
   if (data.bytes[0] == SENSOR_HEADER) { //TODO
     Wire.write(data.bytes[0]); //TODO
@@ -198,8 +217,9 @@ void loop() {
   //
   Wire.endTransmission();    // stop transmitting
   delay(10);
+  
 }
-
+*/
 //<------------------------------------------------------------>
 
 void initializePins() {
@@ -336,7 +356,14 @@ void manual_override_check() {
   }
 }
 
-void changeStatus(char input, EthernetClient client) {
+void request_enter_check() {
+  digitalWrite(RQSpin, (orvcu.bit.R2E ? HIGH : LOW));
+  if (orvcu.bit.R2E == 1) {
+    
+  }
+}
+/*
+  void changeStatus(char input, EthernetClient client) {
   client.read();
   client.println("R2R?");
   while (input != '\n') {
@@ -365,9 +392,9 @@ void changeStatus(char input, EthernetClient client) {
       break;
     }
   }
-}
+  }
 
-int setTest(char input, EthernetClient client) {
+  int setTest(char input, EthernetClient client) {
   client.read();
   client.println("What is the current test number?");
   String testNumString;
@@ -381,9 +408,9 @@ int setTest(char input, EthernetClient client) {
   }
   int testNum = testNumString.toInt();
   return testNum;
-}
+  }
 
-int setTime(char input, EthernetClient client) {
+  int setTime(char input, EthernetClient client) {
   client.read();
   client.println("Enter the number of seconds to set timer to:");
   String timeString;
@@ -397,9 +424,9 @@ int setTime(char input, EthernetClient client) {
   }
   int timeAmt = timeString.toInt();
   return timeAmt;
-}
+  }
 
-void manOver(char input, EthernetClient client) {
+  void manOver(char input, EthernetClient client) {
   client.read() ;
   client.println("Enter status of manual override:");
   while (input != '\n') {
@@ -410,5 +437,6 @@ void manOver(char input, EthernetClient client) {
       break;
     }
   }
-}
+  }
+*/
 

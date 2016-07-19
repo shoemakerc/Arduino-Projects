@@ -16,6 +16,8 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
+#define BUFF_SIZE 512
+
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
@@ -66,9 +68,24 @@ void loop() {
       g_inputStream.concat(inch);
       Serial.print(inch);
     }
-    char buff[512] = "";
-    g_inputStream.toCharArray(buff, 512);
-    client.write(buff, 512);
+    char buff[BUFF_SIZE] = "";
+    if (g_inputStream[0] == 'C' && g_inputStream[1] == 'S') {
+      String response = "Initiate control state display...";
+      response.toCharArray(buff, BUFF_SIZE);
+      client.write(buff, BUFF_SIZE);
+    }
+//    if (g_inputStream.startsWith("Say hello")) {
+//      String response = "Bonjour, do you speak le francais?  Hon hon hon.";
+//      response.toCharArray(buff, BUFF_SIZE);
+//      client.write(buff, BUFF_SIZE);
+//    } else if (g_inputStream.startsWith("ORVuCtrl")) {
+//      g_inputStream.toCharArray(buff, BUFF_SIZE);
+//      client.write(buff, BUFF_SIZE);  
+//    } else {
+//      String response = "Invalid input.  Please enter in [9] and try again.";
+//      response.toCharArray(buff, BUFF_SIZE);
+//      client.write(buff, BUFF_SIZE);
+//    } 
     g_inputStream = "";
     Serial.println("");
     Serial.println(g_inputStream);
