@@ -79,11 +79,12 @@ IPAddress ip(192, 168, 0, 86); // Ethernet
 EthernetServer server(23); // Ethernet
 boolean alreadyConnected = false;
 
+char send_buffer[BUFF_SIZE];//TODO
 String inputStream; // input string buffer for client commands
-static ORVCtrlUnion orvcu = {0, 0};
+char test[16] = "bob";
 
 void setup() {
-  Ethernet.begin(mac, ip); //, myDns, gateway, subnet); // Ethernet
+  Ethernet.begin(mac, ip); // Ethernet
 
   server.begin();
   Wire.begin(); // join i2c bus (address optional for master)
@@ -96,67 +97,78 @@ void setup() {
   Serial.println(Ethernet.localIP());
 }
 
-//First two bytes are the header bytes
-char send_buffer[BUFF_SIZE];//TODO
-
 void loop() {
-//  static ORVCtrlUnion orvcu = {0, 0}; // moved to global
+  static ORVCtrlUnion orvcu = {0, 0};
   static ProgressState prog;
+  prog.current_test = 258;
+  prog.total_test = 120;
+  prog.seconds_remaining = 500;
+  memcpy(prog.test_type, test, 16);
+  memcpy(prog.subject_name, test, 16);
   static MarqueeState marq;
 
   //collects data from all the sensors
-  read_inputs(orvcu);
-
-  orvcu.bit.SRO = 1;
+  orvcu = read_inputs(orvcu);
 
   // wait for a new client:
   EthernetClient client = server.available();
 
-  manual_override_check(orvcu);
+  manual_override_check(orvcu); //
+
   request_to_enter_check(orvcu);
 
   //collects data to determine the state of the stoplight
   orvcu.bit.SLT = RYG_SET(orvcu);
+
   //lights the stoplight according to the state
   led_control(orvcu);
-  // when the client sends the first byte, say hello:
-  /*
+
   if (client) {
 
     if (!alreadyConnected) {
-      // clear out the input buffer:
+      // when host connects for the first time,
+      // clear out the input buffer and print message
       client.flush();
       Serial.println("New client is online");
       alreadyConnected = true;
     }
 
+    int bytecount=0;
     while (client.available() > 0) {
-      // read the bytes incoming from the client:
+      // read the bytes incoming from the host:
       char inch = client.read();
       inputStream.concat(inch);
+
+      
+      buffer[bytecount++] = client.read();
     }
 
-    if (inputStream[0] == 'P' && inputStream[1] == 'D') {
-      send_buffer[0] == inputStream[0];
-      send_buffer[1] == inputStream[1];
+    if (inputStream[0] == 'P' && inputStream[1] == 'D') { // Progress display
+      send_buffer[0] = inputStream[0];
+      send_buffer[1] = inputStream[1];
       memcpy(&send_buffer[2], &prog, sizeof(prog));
+      for (int i = 0; i < 38; i++) {
+        Serial.println((int) send_buffer[i]);      
+        }
+      Serial.println("");
       sendWire(send_buffer);
-    } else if (inputStream[0] == 'M' && inputStream[1] == 'D') {
-      send_buffer[0] == inputStream[0];
-      send_buffer[1] == inputStream[1];
+      client.write(send_buffer, BUFF_SIZE);
+    } else if (inputStream[0] == 'M' && inputStream[1] == 'D') { // Marquee display
+      send_buffer[0] = inputStream[0];
+      send_buffer[1] = inputStream[1];
       memcpy(&send_buffer[2], &marq, sizeof(marq));
       sendWire(send_buffer);
-    } else if (inputStream[0] == 'M' && inputStream[1] == 'C') { //TODO clears display
+    } else if (inputStream[0] == 'M' && inputStream[1] == 'C') { //TODO clears marquee display
       MarqueeState marq1;
       marq = marq1;
-    } else if (inputStream[0] == 'D' && inputStream[1] == 'D') {
-      send_buffer[0] == inputStream[0];
-      send_buffer[1] == inputStream[1];
+    } else if (inputStream[0] == 'D' && inputStream[1] == 'D') { // Default display
+      send_buffer[0] = inputStream[0];
+      send_buffer[1] = inputStream[1];
       sendWire(send_buffer);
     }
-    inputStream = "";
+    inputStream = ""; // clear μController stream after every received host command
   }
-*/
+
   delay(10);
 }
 
@@ -223,7 +235,7 @@ void initializePins() {
   return;
 }
 
-void read_inputs(ORVCtrlUnion orvcu)
+ORVCtrlUnion read_inputs(ORVCtrlUnion orvcu)
 {
   // R2E, CVT, ESP, DRS, MOR, SBT, and MBK are normally pulled-up
   // When switched close, they are pulled LOW.
@@ -243,6 +255,8 @@ void read_inputs(ORVCtrlUnion orvcu)
 
   // Read Turn-Counter
   //TURN_COUNTER_INPUT();
+
+  return orvcu;
 }
 
 int  RYG_SET(ORVCtrlUnion orvcu) {
@@ -297,32 +311,39 @@ void manual_override_check(ORVCtrlUnion orvcu) {
 }
 
 void request_to_enter_check(ORVCtrlUnion orvcu) {
-  digitalWrite(RQSpin, (orvcu.bit.R2E ? HIGH : LOW));
-  if (orvcu.bit.R2E == 0) {
+  static bool current = false;
+  static bool previous = false;
+  static int click_count = 0;
+  if (orvcu.bit.R2E == 1) {
+    current = true;
+  } else {
+    current = false;
+  }
+  if (current - previous == 1) {
+    click_count++;
+  }
+  if (click_count % 2 == 1) {
+    digitalWrite(RQSpin, HIGH);
     send_buffer[0] = 'D';
     send_buffer[1] = 'H';
     memcpy(&send_buffer[2], &orvcu, sizeof(orvcu));
-    Serial.println((int)send_buffer[2]);
-    Serial.println((int)send_buffer[3]);
-    Serial.println((int)send_buffer[4]);
-    Serial.println((int)send_buffer[5]);
-    Serial.println(sizeof(orvcu));
-    //Serial.println(orvcu.bit.SRO);
     sendWire(send_buffer);
+  } else {
+    digitalWrite(RQSpin, LOW); //TODO
   }
+  previous = current;
 }
 
 void sendWire(char send_buffer[]) {
   Wire.beginTransmission(13); // transmit to device #13
-  for (int i = 0; i < sizeof(send_buffer); i++) {
-    Wire.write(send_buffer);
-  }
+  Wire.write(send_buffer);
   Wire.endTransmission();    // stop transmitting
+  memset(send_buffer,0,strlen(send_buffer));
 }
 /*
-ORVCtrlUnion changeStatus(char input, EthernetClient client, ORVCtrlUnion orvcu) {
+  ORVCtrlUnion changeStatus(char input, EthernetClient client, ORVCtrlUnion orvcu) {
   client.read();
-  client.println("R2R?");
+  client.println("R2R?")
   while (input != '\n') {
     char digit = client.read();
     if (digit == 48 || digit == 49) {
@@ -350,9 +371,9 @@ ORVCtrlUnion changeStatus(char input, EthernetClient client, ORVCtrlUnion orvcu)
     }
   }
   return orvcu;
-}
+  }
 
-int setTest(char input, EthernetClient client) {
+  int setTest(char input, EthernetClient client) {
   client.read();
   client.println("What is the current test number?");
   String testNumString;
@@ -366,9 +387,9 @@ int setTest(char input, EthernetClient client) {
   }
   int testNum = testNumString.toInt();
   return testNum;
-}
+  }
 
-int setTime(char input, EthernetClient client) {
+  int setTime(char input, EthernetClient client) {
   client.read();
   client.println("Enter the number of seconds to set timer to:");
   String timeString;
@@ -382,9 +403,9 @@ int setTime(char input, EthernetClient client) {
   }
   int timeAmt = timeString.toInt();
   return timeAmt;
-}
+  }
 
-int manOver(char input, EthernetClient client) {
+  int manOver(char input, EthernetClient client) {
   int manOverStatus;
   client.read() ;
   client.println("Enter status of manual override:");
@@ -397,5 +418,5 @@ int manOver(char input, EthernetClient client) {
     }
   }
   return manOverStatus;
-}
+  }
 */

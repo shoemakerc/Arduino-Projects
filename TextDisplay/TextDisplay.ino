@@ -147,33 +147,33 @@ void loop()
   matrix.fillScreen(0);
   matrix.setFont(0);
 
-  //bitmap2();
+  bitmap2();
 
   // Display different screens (in order listed below)
-  if ((time_passed / 1000) % (9 * screen_up_time) <= screen_up_time) {
-    curr = 1;
-    bitmap(myBitmap1);
-  } else if ((time_passed / 1000) % (9 * screen_up_time) > screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 2 * screen_up_time) {
-    curr = 2;
-    bitmap(myBitmap2);
-  } else if ((time_passed / 1000) % (9 * screen_up_time) > 2 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 3 * screen_up_time) {
-    curr = 3;
-    bitmap(myBitmap3);
-  } else if ((time_passed / 1000) % (9 * screen_up_time) > 3 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 4 * screen_up_time) {
-    bitmap2();
-  } else if ((time_passed / 1000) % (9 * screen_up_time) > 4 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 5 * screen_up_time) {
-    displayScreen1();
-  } else if ((time_passed / 1000) % (9 * screen_up_time) > 5 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 6 * screen_up_time) {
-    displayScreen2();
-  } else if ((time_passed / 1000) % (9 * screen_up_time) > 6 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 7 * screen_up_time) {
-    lines();
-  } else if ((time_passed / 1000) % (9 * screen_up_time) > 7 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 8 * screen_up_time) {
-    curr = 4;
-    arrow();
-  } else {
-    curr = 5;
-    logo(matrix.Color888(105, 105, 105));
-  }
+//  if ((time_passed / 1000) % (9 * screen_up_time) <= screen_up_time) {
+//    curr = 1;
+//    bitmap(myBitmap1);
+//  } else if ((time_passed / 1000) % (9 * screen_up_time) > screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 2 * screen_up_time) {
+//    curr = 2;
+//    bitmap(myBitmap2);
+//  } else if ((time_passed / 1000) % (9 * screen_up_time) > 2 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 3 * screen_up_time) {
+//    curr = 3;
+//    bitmap(myBitmap3);
+//  } else if ((time_passed / 1000) % (9 * screen_up_time) > 3 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 4 * screen_up_time) {
+//    bitmap2();
+//  } else if ((time_passed / 1000) % (9 * screen_up_time) > 4 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 5 * screen_up_time) {
+//    displayScreen1();
+//  } else if ((time_passed / 1000) % (9 * screen_up_time) > 5 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 6 * screen_up_time) {
+//    displayScreen2();
+//  } else if ((time_passed / 1000) % (9 * screen_up_time) > 6 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 7 * screen_up_time) {
+//    lines();
+//  } else if ((time_passed / 1000) % (9 * screen_up_time) > 7 * screen_up_time && (time_passed / 1000) % (9 * screen_up_time) <= 8 * screen_up_time) {
+//    curr = 4;
+//    arrow();
+//  } else {
+//    curr = 5;
+//    logo(matrix.Color888(105, 105, 105));
+//  }
 
   matrix.swapBuffers(true);
   delay(buffer_rate);
@@ -308,7 +308,7 @@ void bitmap(const uint8_t *bitmap_input) {
 //}
 
 void bitmap2() {
-  matrix.drawBitmap(0, 0, jimi, 32, 32, matrix.Color888(128, 0, 0));
-  matrix.drawBitmap(32, 0, zuckerberg, 32, 32, matrix.Color888(59, 89, 152));
+  matrix.drawBitmap(0, 0, jimi, 31, 31, matrix.Color888(128, 0, 0));
+  //matrix.drawBitmap(32, 0, zuckerberg, 32, 32, matrix.Color888(59, 89, 152));
 }
 

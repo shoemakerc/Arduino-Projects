@@ -77,24 +77,24 @@ void loop()
   matrix.setFont(0);
 
   // Display changes in each of the three HSV variables for red, green, and blue
-//  if ((time_passed / 1000) % (3 * SCREEN_UP_TIME) <= SCREEN_UP_TIME) {
-//    displayHSV(R_HSV);
-//  } else if ((time_passed / 1000) % (3 * SCREEN_UP_TIME) > SCREEN_UP_TIME && (time_passed / 1000) % (3 * SCREEN_UP_TIME) <= 2 * SCREEN_UP_TIME) {
-//    displayHSV(G_HSV);
-//  } else {
-//    displayHSV(B_HSV);
-//  }
+  if ((time_passed / 1000) % (3 * SCREEN_UP_TIME) <= SCREEN_UP_TIME) {
+    displayHSV(R_HSV);
+  } else if ((time_passed / 1000) % (3 * SCREEN_UP_TIME) > SCREEN_UP_TIME && (time_passed / 1000) % (3 * SCREEN_UP_TIME) <= 2 * SCREEN_UP_TIME) {
+    displayHSV(G_HSV);
+  } else {
+    displayHSV(B_HSV);
+  }
 
   // Display change in brightness for primary and secondary colors (using the Color888 function)
-  if ((time_passed / 1000) % (4 * SCREEN_UP_TIME) <= SCREEN_UP_TIME) {
-    displayGradientRYG();
-  } else if ((time_passed / 1000) % (4 * SCREEN_UP_TIME) > SCREEN_UP_TIME && (time_passed / 1000) % (4 * SCREEN_UP_TIME) <= 2 * SCREEN_UP_TIME) {
-    displayGradientRYG2();
-  } else if ((time_passed / 1000) % (4 * SCREEN_UP_TIME) > 2 * SCREEN_UP_TIME && (time_passed / 1000) % (4 * SCREEN_UP_TIME) <= 3 * SCREEN_UP_TIME) {
-    displayGradientCBM();
-  } else {
-    displayGradientCBM2();
-  }
+//  if ((time_passed / 1000) % (4 * SCREEN_UP_TIME) <= SCREEN_UP_TIME) {
+//    displayGradientRYG();
+//  } else if ((time_passed / 1000) % (4 * SCREEN_UP_TIME) > SCREEN_UP_TIME && (time_passed / 1000) % (4 * SCREEN_UP_TIME) <= 2 * SCREEN_UP_TIME) {
+//    displayGradientRYG2();
+//  } else if ((time_passed / 1000) % (4 * SCREEN_UP_TIME) > 2 * SCREEN_UP_TIME && (time_passed / 1000) % (4 * SCREEN_UP_TIME) <= 3 * SCREEN_UP_TIME) {
+//    displayGradientCBM();
+//  } else {
+//    displayGradientCBM2();
+//  }
 
   // Display shift in between adjacent primary and secondary colors (using the Color888 function)
 //  if ((time_passed / 1000) % (6 * SCREEN_UP_TIME) <= SCREEN_UP_TIME) {

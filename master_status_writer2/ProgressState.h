@@ -1,4 +1,4 @@
-#ifndef PROGRESS_STATE_H
+  #ifndef PROGRESS_STATE_H
 #define PROGRESS_STATE_H
 
 struct ProgressState
